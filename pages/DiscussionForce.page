@@ -210,34 +210,28 @@
     </div>
     <div id="contents"></div>
 
-<!--
-- データ構造イメージ
-  Key    : ${project_id}(案件ID)
-  Value  : ${sticky_id}(案件IDに紐付く複数の付箋ID)
-  example) key is 「p-001」
-           value is 「[{ "sticky_id": "s-001" }, { "sticky_id": "s-002" }, { "sticky_id": "s-003" }, { "sticky_id": "s-004" }]」
-  Key    : ${project_id}/${sticky_id}(案件ID/付箋ID)
-  Value  : ${sticky_data}(付箋IDに紐付く付箋情報)
-  example) key is 「p-001/s-001」
-           value is 「[{ "text": "message", "color": "cyan", "last_updated_by" : "yamaya" }]」
-       -->
-       <script type="text/javascript">
-        $(document).ready(function () {
-            var repaint = function(nodes, updated_node){
-                for (var i in nodes){
-                    console.log(nodes[i]);
-                    try{
-                        instance.update(nodes[i]);
-                    }catch(e){console.log(e)}
-                }
-            };
+    <!--
+    goinstant データ構造イメージ
+    Key    : ${project_id}(ノードID)
+    Value  : ノード
+    -->
+   <script type="text/javascript">
+    $(document).ready(function () {
 
-          var go_room;
-          var projectKey;
+        var repaint = function(nodes){
+            for (var i in nodes){
+                try{
+                    instance.update(nodes[i]);
+                }catch(e){console.log(e)}
+            }
+        };
+
+        var go_room;    //goinstantのroom
+        var projectKey; //選択中のproject
 
 
         window.loadProject = function(key)
-         {
+        {
             $("#contents").empty();
             console.log("load" + key);
             if(projectKey){
@@ -257,13 +251,10 @@
               if (context.bubble) {
                   repaint([value], context.targetKey);
                   console.log("bubbling event from", context.targetKey, "-", value);
-                } else {
-                  if (value) {
-                    console.log("set was directly called on parents -", value);
-                  }
                 }
             });
 
+            //イベントハンドラ（ノードの追加/編集/削除）
             sendToGoInstantForUpdate = function(node){
                 var stickyKey = projectKey.key(node.id);
                 stickyKey.set(node);                
@@ -289,7 +280,7 @@
                 console.log("connect to goinstant successfully");
             });
         })();
-});
+    });
 
 </script>    
 
