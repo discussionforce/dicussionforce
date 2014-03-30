@@ -1,0 +1,299 @@
+<!--
+ * @author Masafumi OKAMOTO <masafumi.okamoto@cct-inc.co.jp>
+ * 
+ * Reference
+ * "How to use Angular.Js with Visualforce" by Mohit Shrivastav and Harshit Pandey
+ *  https://github.com/mailtoharshit/Angular/blob/master/Angularjsdemo.page
+-->
+ 
+
+
+<apex:page standardStylesheets="false" sidebar="false" showHeader="false" controller="DiscussionForceController">
+    <html xmlns:ng="http://angularjs.org" ng-app="hello" lang="en">
+        <head>
+            <meta charset="utf-8"/>
+            <link href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.1.1/css/bootstrap.no-icons.min.css" rel="stylesheet"/>
+            <link href="https://netdna.bootstrapcdn.com/font-awesome/2.0/css/font-awesome.css" rel="stylesheet"/>
+            <apex:includeScript value="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"/>
+            <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular.js"/>
+            <apex:includeScript value="{!URLFOR($Resource.ParaFusen2d, 'ParaFusen2d/js/cpick.js')}"/>
+            <apex:includeScript value="{!URLFOR($Resource.ParaFusen2d, 'ParaFusen2d/js/picker.js')}"/>
+            <apex:includeScript value="{!URLFOR($Resource.ParaFusen2d, 'ParaFusen2d/NodeInfo.js')}"/>
+            <apex:includeScript value="{!URLFOR($Resource.ParaFusen2d, 'ParaFusen2d/FusenNodeTreeView.js')}"/>
+            <apex:includeScript value="https://cdn.goinstant.net/v1/platform.min.js"/>
+            <style>
+                .input-mysize { width: 550px }
+                .search-query {
+                padding-left: 469px;
+                background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAJ5JREFUeNpi+P//PwMQMANxERCfAeI/UBrEZwbJQ9WAFR0A4u1AbAnEbFB6O1ScGaawGoi3wHQiYyBYDZKHKbwHxLo4FOqC5GEKf4Ksw6EQ5IyfIDYTkPEUiNUZsAOQ+F9GRkYJEKcFiDficSOIcRjE4QTiY0C8DuRbqAJLKP8/FP9kQArHUiA+jySJjA8w4LAS5KZd0MAHhaccQIABALsMiBZy4YLtAAAAAElFTkSuQmCC);
+                background-repeat: no-repeat;
+                background-position: 562px 8px;
+                }
+                
+                
+            </style>
+        </head>
+        <!--- Javascript -->
+
+        <script type="text/javascript">
+            // 付箋の集合を表すインスタンス
+            var instance = new FusenNodeTreeView("contents");  
+
+        <!-- Name your application -->                
+            var myapp = angular.module('hello', []);
+            var sortingOrder = '';
+        <!-- Define Controller  -->
+            var contrl=myapp.controller('ctrlRead', function ($scope, $filter) {
+                <!--- Initialize Scope Variables --->
+                $scope.sortingOrder = sortingOrder;
+                $scope.reverse = false;
+                $scope.filteredItems = [];
+                $scope.groupedItems = [];
+                $scope.itemsPerPage = 5;
+                $scope.pagedItems = [];
+                $scope.currentPage = 0;
+                $scope.items ={!lstCase};
+                
+                var searchMatch = function (haystack, needle) {
+                    if (!needle) {
+                        return true;
+                    }
+                    return haystack.toLowerCase().indexOf(needle.toLowerCase()) !== -1;
+                };
+                
+                //Initialize the Search Filters 
+                $scope.search = function () {
+                    $scope.filteredItems = $filter('filter')($scope.items, function (item) {
+                        for (var attr in item) {
+                            if (searchMatch(item[attr], $scope.query))
+                                return true;
+                        }
+                        return false;
+                    });
+                    // Define Sorting Order
+                    if ($scope.sortingOrder !== '') {
+                        $scope.filteredItems = $filter('orderBy')($scope.filteredItems, $scope.sortingOrder, $scope.reverse);
+                    }
+                    $scope.currentPage = 0;
+                     console.log($scope.filteredItems );
+
+                    
+                    // Group by pages
+                    $scope.groupToPages();
+                };
+                
+                // Calculate Total Number of Pages based on Records Queried 
+                $scope.groupToPages = function () {
+                    $scope.pagedItems = [];
+                    for (var i = 0; i < $scope.filteredItems.length; i++) {
+                        if (i % $scope.itemsPerPage === 0) {
+                            $scope.pagedItems[Math.floor(i / $scope.itemsPerPage)] = [$scope.filteredItems[i]];
+                        } else {
+                            $scope.pagedItems[Math.floor(i / $scope.itemsPerPage)].push($scope.filteredItems[i]);
+                        }
+                    }
+                };
+                
+                $scope.range = function (start, end) {
+                    var ret = [];
+                    if (!end) {
+                        end = start;
+                        start = 0;
+                    }
+                    for (var i = start; i < end; i++) {
+                        ret.push(i);
+                    }
+                    return ret;
+                };
+                
+                $scope.prevPage = function () {
+                    if ($scope.currentPage > 0) {
+                        $scope.currentPage--;
+                    }
+                };
+                
+                $scope.nextPage = function () {
+                    if ($scope.currentPage < $scope.pagedItems.length - 1) {
+                        $scope.currentPage++;
+                    }
+                };
+                $scope.setPage = function () {
+                    $scope.currentPage = this.n;
+                };
+                // functions have been describe process the data for display
+                $scope.search();
+                
+                // change sorting order
+                $scope.sort_by = function (newSortingOrder) {
+                    if ($scope.sortingOrder == newSortingOrder)
+                        $scope.reverse = !$scope.reverse;
+                    $scope.sortingOrder = newSortingOrder;
+                    
+                    // icon setup
+                    $('th i').each(function () {
+                        // icon reset
+                        $(this).removeClass().addClass('icon-sort');
+                    });
+                    if ($scope.reverse)
+                        $('th.' + new_sorting_order + ' i').removeClass().addClass('icon-chevron-up');
+                    else
+                        $('th.' + new_sorting_order + ' i').removeClass().addClass('icon-chevron-down');
+                };
+               
+               $scope.customer = "id"
+               
+               $scope.radio_change = function(){
+                  window.loadProject($scope.customer);
+               };
+            });
+        
+            contrl.$inject = ['$scope', '$filter'];
+        </script>
+        <body>     
+            <!-- =========== Binding Controller to Body of Page ============= -->
+            <div ng-controller="ctrlRead" class="{{customer}}">
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <a class="brand" href="">Discussion Force</a>
+                    </div>
+                </div> 
+                
+                <div class="input-append" style="width:800px; margin:0 auto;">
+                    <input type="text" ng-model="query" ng-change="search()" class="input-mysize  search-query" placeholder="Search"/>
+                </div>
+               
+                <table class="table  table-hover">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th class="status">Status&nbsp;<a ng-click="sort_by('status')"><i class="icon-sort"></i></a></th>
+                            <th class="type">Type&nbsp;<a ng-click="sort_by('type')"><i class="icon-sort"></i></a></th>
+                            <th class="priority">Priority&nbsp;<a ng-click="sort_by('priority')"><i class="icon-sort"></i></a></th>
+                            <th class="name">Subject&nbsp;<a ng-click="sort_by('subject')"><i class="icon-sort"></i></a></th>      
+                        </tr>
+                    </thead>
+                    <tfoot>
+                        <td colspan="6">
+                            <div class="pagination pagination-large pull-left">
+                                <ul>
+                                    <li ng-class="{disabled: currentPage == 0}">
+                                        <a ng-click="prevPage()">Prev</a>
+                                    </li>
+                                    <li ng-repeat="n in range(pagedItems.length)"
+                                    ng-class="{active: n == currentPage}"
+                                    ng-click="setPage()">
+                                        <a ng-bind="n + 1">1</a>
+                                    </li>
+                                    <li ng-class="{disabled: currentPage == pagedItems.length - 1}">
+                                        <a ng-click="nextPage()">Next</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tfoot>
+                    <tbody>
+                        <tr ng-repeat="item in pagedItems[currentPage] | orderBy:sortingOrder:reverse">
+                            <td><input type="radio" name="radiob" ng-model="$parent.customer" ng-change="radio_change()"  ng-value="item.id" ></input></td>
+                            <td>{{item.status}}</td>
+                            <td>{{item.type}}</td>
+                            <td>{{item.priority}}</td>
+                            <td>{{item.subject}}</td>
+                        </tr>
+                    </tbody>
+                </table>            
+            </div>
+            <div id="user" class="{!$User.Alias}"></div>
+ 
+    <div id="menubar">
+        <button class="html5jp-cpick [target:UserColorPicker;coloring:true]">ユーザー色設定</button>
+        <input type="text" name="c4" value="#80ff80" size="12" id="UserColorPicker" style="visibility:hidden" />
+    </div>
+    <div id="contents"></div>
+
+<!--
+- データ構造イメージ
+  Key    : ${project_id}(案件ID)
+  Value  : ${sticky_id}(案件IDに紐付く複数の付箋ID)
+  example) key is 「p-001」
+           value is 「[{ "sticky_id": "s-001" }, { "sticky_id": "s-002" }, { "sticky_id": "s-003" }, { "sticky_id": "s-004" }]」
+  Key    : ${project_id}/${sticky_id}(案件ID/付箋ID)
+  Value  : ${sticky_data}(付箋IDに紐付く付箋情報)
+  example) key is 「p-001/s-001」
+           value is 「[{ "text": "message", "color": "cyan", "last_updated_by" : "yamaya" }]」
+       -->
+       <script type="text/javascript">
+        $(document).ready(function () {
+            var repaint = function(nodes, updated_node){
+                for (var i in nodes){
+                    console.log(nodes[i]);
+                    try{
+                        instance.update(nodes[i]);
+                    }catch(e){console.log(e)}
+                }
+            };
+
+          var go_room;
+          var projectKey;
+
+
+        window.loadProject = function(key)
+         {
+            $("#contents").empty();
+            console.log("load" + key);
+            if(projectKey){
+                projectKey.off();
+            }
+            projectKey = go_room.key(key);
+            //初期データを取得
+            projectKey.get(function (err, value, context) {
+                if (err) {
+                    throw err;
+                }
+                repaint(value);
+                $("#contents").prepend(instance.createRoot());
+            });
+
+            projectKey.on("set", { bubble: true, local: true }, function(value, context) {
+              if (context.bubble) {
+                  repaint([value], context.targetKey);
+                  console.log("bubbling event from", context.targetKey, "-", value);
+                } else {
+                  if (value) {
+                    console.log("set was directly called on parents -", value);
+                  }
+                }
+            });
+
+            sendToGoInstantForUpdate = function(node){
+                var stickyKey = projectKey.key(node.id);
+                stickyKey.set(node);                
+            };
+            sendToGoInstantForAdd = function(node){
+                sendToGoInstantForUpdate(node);              
+            };
+            sendToGoInstantForRemove = function(id){
+                var stickyKey = projectKey.key(id);
+                stickyKey.remove();
+            };
+         };
+
+        //goinstantと接続
+        (function(){
+            var url = "https://goinstant.net/f03a305c71b2/tmp-app";
+            goinstant.connect(url, function(err, conn, room) {
+                if (err) {
+                    throw err;
+                }
+
+                go_room = room;
+                console.log("connect to goinstant successfully");
+            });
+        })();
+});
+
+</script>    
+
+
+        </body>
+    </html>
+</apex:page>

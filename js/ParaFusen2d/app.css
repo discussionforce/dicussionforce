@@ -1,0 +1,10 @@
+﻿@charset 'UTF-8';
+
+body { 
+    font: 14px Helvetica, Sans-Serif;
+
+} 
+span {
+    font-style: italic;
+}
+
